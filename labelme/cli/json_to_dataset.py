@@ -4,17 +4,18 @@ import json
 import os
 import os.path as osp
 
+import imgviz
 import PIL.Image
-import yaml
 
 from labelme.logger import logger
 from labelme import utils
 
 
 def main():
-    logger.warning('This script is aimed to demonstrate how to convert the'
-                   'JSON file to a single image dataset, and not to handle'
-                   'multiple JSON files to generate a real-use dataset.')
+    logger.warning('This script is aimed to demonstrate how to convert the '
+                   'JSON file to a single image dataset.')
+    logger.warning("It won't handle multiple JSON files to generate a "
+                   "real-use dataset.")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('json_file')
@@ -49,12 +50,17 @@ def main():
         else:
             label_value = len(label_name_to_value)
             label_name_to_value[label_name] = label_value
-    lbl = utils.shapes_to_label(img.shape, data['shapes'], label_name_to_value)
+    lbl, _ = utils.shapes_to_label(
+        img.shape, data['shapes'], label_name_to_value
+    )
 
     label_names = [None] * (max(label_name_to_value.values()) + 1)
     for name, value in label_name_to_value.items():
         label_names[value] = name
-    lbl_viz = utils.draw_label(lbl, img, label_names)
+
+    lbl_viz = imgviz.label2rgb(
+        label=lbl, img=imgviz.asgray(img), label_names=label_names, loc='rb'
+    )
 
     PIL.Image.fromarray(img).save(osp.join(out_dir, 'img.png'))
     utils.lblsave(osp.join(out_dir, 'label.png'), lbl)
@@ -63,11 +69,6 @@ def main():
     with open(osp.join(out_dir, 'label_names.txt'), 'w') as f:
         for lbl_name in label_names:
             f.write(lbl_name + '\n')
-
-    logger.warning('info.yaml is being replaced by label_names.txt')
-    info = dict(label_names=label_names)
-    with open(osp.join(out_dir, 'info.yaml'), 'w') as f:
-        yaml.safe_dump(info, f, default_flow_style=False)
 
     logger.info('Saved to: {}'.format(out_dir))
 

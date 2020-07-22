@@ -8,6 +8,7 @@ import json
 import os
 import os.path as osp
 import sys
+import uuid
 
 import numpy as np
 import PIL.Image
@@ -81,21 +82,18 @@ def main():
 
     out_ann_file = osp.join(args.output_dir, 'annotations.json')
     label_files = glob.glob(osp.join(args.input_dir, '*.json'))
-    for image_id, label_file in enumerate(label_files):
-        print('Generating dataset from:', label_file)
-        with open(label_file) as f:
-            label_data = json.load(f)
+    for image_id, filename in enumerate(label_files):
+        print('Generating dataset from:', filename)
 
-        base = osp.splitext(osp.basename(label_file))[0]
+        label_file = labelme.LabelFile(filename=filename)
+
+        base = osp.splitext(osp.basename(filename))[0]
         out_img_file = osp.join(
             args.output_dir, 'JPEGImages', base + '.jpg'
         )
 
-        img_file = osp.join(
-            osp.dirname(label_file), label_data['imagePath']
-        )
-        img = np.asarray(PIL.Image.open(img_file))
-        PIL.Image.fromarray(img).save(out_img_file)
+        img = labelme.utils.img_data_to_arr(label_file.imageData)
+        PIL.Image.fromarray(img).convert("RGB").save(out_img_file)
         data['images'].append(dict(
             license=0,
             url=None,
@@ -108,24 +106,38 @@ def main():
 
         masks = {}                                     # for area
         segmentations = collections.defaultdict(list)  # for segmentation
-        for shape in label_data['shapes']:
+        for shape in label_file.shapes:
             points = shape['points']
             label = shape['label']
-            shape_type = shape.get('shape_type', None)
+            group_id = shape.get('group_id')
+            shape_type = shape.get('shape_type', 'polygon')
             mask = labelme.utils.shape_to_mask(
                 img.shape[:2], points, shape_type
             )
 
-            if label in masks:
-                masks[label] = masks[label] | mask
+            if group_id is None:
+                group_id = uuid.uuid1()
+
+            instance = (label, group_id)
+
+            if instance in masks:
+                masks[instance] = masks[instance] | mask
             else:
-                masks[label] = mask
+                masks[instance] = mask
 
-            points = np.asarray(points).flatten().tolist()
-            segmentations[label].append(points)
+            if shape_type == 'rectangle':
+                (x1, y1), (x2, y2) = points
+                x1, x2 = sorted([x1, x2])
+                y1, y2 = sorted([y1, y2])
+                points = [x1, y1, x2, y1, x2, y2, x1, y2]
+            else:
+                points = np.asarray(points).flatten().tolist()
 
-        for label, mask in masks.items():
-            cls_name = label.split('-')[0]
+            segmentations[instance].append(points)
+        segmentations = dict(segmentations)
+
+        for instance, mask in masks.items():
+            cls_name, group_id = instance
             if cls_name not in class_name_to_id:
                 continue
             cls_id = class_name_to_id[cls_name]
@@ -139,7 +151,7 @@ def main():
                 id=len(data['annotations']),
                 image_id=image_id,
                 category_id=cls_id,
-                segmentation=segmentations[label],
+                segmentation=segmentations[instance],
                 area=area,
                 bbox=bbox,
                 iscrowd=0,

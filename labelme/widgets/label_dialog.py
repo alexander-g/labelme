@@ -5,10 +5,11 @@ from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
 
-QT5 = QT_VERSION[0] == '5'  # NOQA
-
 from labelme.logger import logger
 import labelme.utils
+
+
+QT5 = QT_VERSION[0] == '5'
 
 
 # TODO(unknown):
@@ -43,9 +44,17 @@ class LabelDialog(QtWidgets.QDialog):
         self.edit.editingFinished.connect(self.postProcess)
         if flags:
             self.edit.textChanged.connect(self.updateFlags)
+        self.edit_group_id = QtWidgets.QLineEdit()
+        self.edit_group_id.setPlaceholderText('Group ID')
+        self.edit_group_id.setValidator(
+            QtGui.QRegExpValidator(QtCore.QRegExp(r'\d*'), None)
+        )
         layout = QtWidgets.QVBoxLayout()
         if show_text_field:
-            layout.addWidget(self.edit)
+            layout_edit = QtWidgets.QHBoxLayout()
+            layout_edit.addWidget(self.edit, 6)
+            layout_edit.addWidget(self.edit_group_id, 2)
+            layout.addLayout(layout_edit)
         # buttons
         self.buttonBox = bb = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
@@ -76,6 +85,7 @@ class LabelDialog(QtWidgets.QDialog):
             self.labelList.setDragDropMode(
                 QtWidgets.QAbstractItemView.InternalMove)
         self.labelList.currentItemChanged.connect(self.labelSelected)
+        self.labelList.itemDoubleClicked.connect(self.labelDoubleClicked)
         self.edit.setListWidget(self.labelList)
         layout.addWidget(self.labelList)
         # label_flags
@@ -126,6 +136,9 @@ class LabelDialog(QtWidgets.QDialog):
         if text:
             self.accept()
 
+    def labelDoubleClicked(self, item):
+        self.validate()
+
     def postProcess(self):
         text = self.edit.text()
         if hasattr(text, 'strip'):
@@ -174,7 +187,13 @@ class LabelDialog(QtWidgets.QDialog):
             flags[item.text()] = item.isChecked()
         return flags
 
-    def popUp(self, text=None, move=True, flags=None):
+    def getGroupId(self):
+        group_id = self.edit_group_id.text()
+        if group_id:
+            return int(group_id)
+        return None
+
+    def popUp(self, text=None, move=True, flags=None, group_id=None):
         if self._fit_to_content['row']:
             self.labelList.setMinimumHeight(
                 self.labelList.sizeHintForRow(0) * self.labelList.count() + 2
@@ -192,6 +211,10 @@ class LabelDialog(QtWidgets.QDialog):
             self.resetFlags(text)
         self.edit.setText(text)
         self.edit.setSelection(0, len(text))
+        if group_id is None:
+            self.edit_group_id.clear()
+        else:
+            self.edit_group_id.setText(str(group_id))
         items = self.labelList.findItems(text, QtCore.Qt.MatchFixedString)
         if items:
             if len(items) != 1:
@@ -203,6 +226,6 @@ class LabelDialog(QtWidgets.QDialog):
         if move:
             self.move(QtGui.QCursor.pos())
         if self.exec_():
-            return self.edit.text(), self.getFlags()
+            return self.edit.text(), self.getFlags(), self.getGroupId()
         else:
-            return None, None
+            return None, None, None
