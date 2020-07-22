@@ -1,8 +1,10 @@
 # -*- mode: python -*-
 # vim: ft=python
 
+import sys
 
-block_cipher = None
+
+sys.setrecursionlimit(5000)  # required on Windows
 
 
 a = Analysis(
@@ -17,11 +19,8 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=['matplotlib'],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data)
 exe = EXE(
     pyz,
     a.scripts,
@@ -38,7 +37,7 @@ exe = EXE(
 )
 app = BUNDLE(
     exe,
-    name='labelme.app',
+    name='Labelme.app',
     icon='labelme/icons/icon.icns',
     bundle_identifier=None,
     info_plist={'NSHighResolutionCapable': 'True'},

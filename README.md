@@ -66,6 +66,7 @@ There are options:
 
 - Platform agonistic installation: [Anaconda](#anaconda), [Docker](#docker)
 - Platform specific installation: [Ubuntu](#ubuntu), [macOS](#macos), [Windows](#windows)
+- Pre-build binaries from [the release section](https://github.com/wkentaro/labelme/releases)
 
 ### Anaconda
 
@@ -117,6 +118,9 @@ sudo pip install labelme
 # Python3
 sudo apt-get install python3-pyqt5  # PyQt5
 sudo pip3 install labelme
+
+# or install standalone executable from:
+# https://github.com/wkentaro/labelme/releases
 ```
 
 ### Ubuntu 19.10+ / Debian (sid)
@@ -132,10 +136,8 @@ sudo apt-get install labelme
 brew install pyqt  # maybe pyqt5
 pip install labelme  # both python2/3 should work
 
-# or install standalone executable / app
-# NOTE: this only installs the `labelme` command
-brew install wkentaro/labelme/labelme
-brew cask install wkentaro/labelme/labelme
+# or install standalone executable/app from:
+# https://github.com/wkentaro/labelme/releases
 ```
 
 ### Windows
@@ -219,8 +221,6 @@ pip install -e .
 ## How to build standalone executable
 
 Below shows how to build the standalone executable on macOS, Linux and Windows.  
-Also, there are pre-built executables in
-[the release section](https://github.com/wkentaro/labelme/releases).
 
 ```bash
 # Setup conda
